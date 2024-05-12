@@ -30,6 +30,8 @@ extern "C" {
 typedef struct {
     uint8_t col;
     uint8_t row;
+    bool use_custom_keycode;
+    uint16_t custom_keycode;
 } keypos_t;
 
 typedef enum keyevent_type_t { TICK_EVENT = 0, KEY_EVENT = 1, ENCODER_CW_EVENT = 2, ENCODER_CCW_EVENT = 3, COMBO_EVENT = 4, DIP_SWITCH_ON_EVENT = 5, DIP_SWITCH_OFF_EVENT = 6 } keyevent_type_t;
