@@ -29,6 +29,7 @@ int16_t delta_left_x = 0;
 int16_t delta_left_y = 0;
 int16_t delta_right_x = 0;
 int16_t delta_right_y = 0;
+int16_t ref_cpi = 6600;
 static uint16_t haptic_timer = 0;
 
 int16_t os_id = 0;
@@ -98,6 +99,7 @@ enum custom_keycodes {
 #    endif
 
 bool            tap_toggling          = false;
+bool enable_haptic = false;
 int16_t delta_x = 0;
 int16_t delta_y = 0;
 int16_t scroll_timer = 0;
@@ -142,7 +144,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[_ALT] = LAYOUT_5x6_5(
     XXXXXXX,       KC_5,         KC_4,         KC_3,         KC_2,         KC_1,  			       KC_0,          KC_9,          KC_8,          KC_7,          KC_6,          KC_INS,
 	XXXXXXX,       XXXXXXX,      LGUI_7,       LGUI_8,       LGUI_9,       LCAG(KC_C), 			   EN_CIRC,       KC_MUTE,       KC_VOLD,       KC_VOLU,       XXXXXXX,       XXXXXXX,
-	XXXXXXX,       XXXXXXX,      LGUI_4,       LGUI_5,       LGUI_6,       XXXXXXX,  			   KC_CALC,       XXXXXXX,       XXXXXXX,       XXXXXXX,       XXXXXXX,       XXXXXXX,
+	XXXXXXX,       XXXXXXX,      LGUI_4,       LGUI_5,       LGUI_6,       XXXXXXX,  			   KC_CALC,       HF_ON,       HF_OFF,       XXXXXXX,       XXXXXXX,       XXXXXXX,
 	KC_NUM,        XXXXXXX,      LGUI_1,       LGUI_2,       LGUI_3,       LGUI_0,				   C_LN,          CT_C,          CT_V,       	CT_X,          CT_A,       DPI_CONFIG,
 
                                  XXXXXXX,      XXXXXXX,      CTRL_0,       OSM(MOD_LSFT),          XXXXXXX,       XXXXXXX,       CT_X,          CT_V,
@@ -235,15 +237,14 @@ void pointing_device_change_cpi(void) {
     #endif
 }
 
-// void keyboard_post_init_user(void) {
-
-  // Call the post init code.
-  // rgblight_enable_noeeprom(); // enables Rgb, without saving settings
-  // rgblight_sethsv_noeeprom(180, 255, 255); // sets the color to teal/cyan without saving
-  // rgblight_mode_noeeprom(RGBLIGHT_MODE_BREATHING + 3); // sets mode to Fast breathing without saving
-// }
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+	#ifdef POINTING_DEVICE_ENABLE
+		if (keycode == DPI_CONFIG && record->event.pressed) {
+            pointing_device_change_cpi();
+            return false;
+        }
+	#endif
+
 	if (!lang_shift_process_record(keycode, record)) return false;
 	switch (keycode) {
 		case CT_Z:
@@ -451,23 +452,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 };
 #endif
 
-bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
-	if (!process_record_user(keycode, record)) {
-		return false;
-	}
-	#ifdef POINTING_DEVICE_ENABLE
-		if (keycode == DPI_CONFIG && record->event.pressed) {
-	    pointing_device_change_cpi();
-	    return false;
-	}
-	#endif
-    return true;
-};
-
 #ifdef POINTING_DEVICE_ENABLE
 
 void keyboard_post_init_user(void) {
 	pointing_device_set_new_cpi(cpi[cpi_sel]);
+}
+
+void keyboard_post_init_kb(void) {
 #ifdef HAPTIC_ENABLE
     register_code16(HF_OFF);
     unregister_code16(HF_OFF);
@@ -481,7 +472,7 @@ report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, re
 		}
 		if (extra_sensor_button_right == true || cursor_button_left == true){
 		    delta_left_y += left_report.y;
-		    if (delta_left_y > 120) {
+		    if ((ref_cpi/cpi[cpi_sel])*delta_left_y > 120) {
                 left_report.v = -1;
                 delta_left_y = 0;
             } else if (delta_left_y < -120) {
@@ -491,8 +482,10 @@ report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, re
             left_report.x = left_report.y = 0;
 
 			delta_right_x += right_report.x;
-			if (delta_right_x > 450) {
-				tap_code(KC_RIGHT);
+			if ((ref_cpi/cpi[cpi_sel])*delta_right_x > 450) {
+                enable_haptic = 1;
+                tap_code(KC_RIGHT);
+                enable_haptic = 0;
 				if (timer_elapsed(haptic_timer) > 29){
 					if (is_keyboard_master()){
 						haptic_master = true;
@@ -502,8 +495,10 @@ report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, re
 					haptic_timer = 0;
 				};
 				delta_right_x = 0;
-			} else if (delta_right_x < -450) {
+			} else if ((ref_cpi/cpi[cpi_sel])*delta_right_x < -450) {
+                enable_haptic = 1;
 				tap_code(KC_LEFT);
+                enable_haptic = 0;
 				if (timer_elapsed(haptic_timer) > 29){
 					if (is_keyboard_master()){
 						haptic_master = true;
@@ -517,18 +512,20 @@ report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, re
             right_report.x = right_report.y = 0;
 		} else if (extra_sensor_button_left == true || cursor_button_right == true){
 		    delta_right_y += right_report.y;
-		    if (delta_right_y > 120) {
+		    if ((ref_cpi/cpi[cpi_sel])*delta_right_y > 120) {
                 right_report.v = -1;
                 delta_right_y = 0;
-            } else if (delta_right_y < -120) {
+            } else if ((ref_cpi/cpi[cpi_sel])*delta_right_y < -120) {
           	    right_report.v = 1;
                 delta_right_y = 0;
             };
             right_report.x = right_report.y = 0;
 
 			delta_left_y += left_report.y;
-			if (delta_left_y > 450) {
+			if ((ref_cpi/cpi[cpi_sel])*delta_left_y > 450) {
+                enable_haptic = 1;
 				tap_code(KC_DOWN);
+                enable_haptic = 0;
 				if (timer_elapsed(haptic_timer) > 29){
 					if (is_keyboard_master()){
 						haptic_slave = true;
@@ -538,8 +535,10 @@ report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, re
 					haptic_timer = 0;
 				};
 				delta_left_y = 0;
-			} else if (delta_left_y < -450) {
+			} else if ((ref_cpi/cpi[cpi_sel])*delta_left_y < -450) {
+                enable_haptic = 1;
 				tap_code(KC_UP);
+                enable_haptic = false;
 				if (timer_elapsed(haptic_timer) > 29){
 					if (is_keyboard_master()){
 						haptic_slave = true;
