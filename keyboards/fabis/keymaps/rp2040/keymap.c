@@ -39,6 +39,8 @@ int cpi_sel = 2;
 
 #define CUSTOM_SAFE_RANGE SAFE_RANGE
 #define LANG_CHANGE_DEFAULT LANG_CHANGE_ALT_SHIFT
+#define DRV2605L_GREETING DRV2605L_EFFECT_CLEAR_SEQUENCE
+#define DRV2605L_DEFAULT_MODE DRV2605L_EFFECT_CLEAR_SEQUENCE
 
 #include "arbitrary_keycode/include.h"
 #include "lang_shift/include.h"
@@ -233,6 +235,14 @@ void pointing_device_change_cpi(void) {
     #endif
 }
 
+// void keyboard_post_init_user(void) {
+
+  // Call the post init code.
+  // rgblight_enable_noeeprom(); // enables Rgb, without saving settings
+  // rgblight_sethsv_noeeprom(180, 255, 255); // sets the color to teal/cyan without saving
+  // rgblight_mode_noeeprom(RGBLIGHT_MODE_BREATHING + 3); // sets mode to Fast breathing without saving
+// }
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 	if (!lang_shift_process_record(keycode, record)) return false;
 	switch (keycode) {
@@ -364,17 +374,19 @@ void matrix_scan_user(void) {
 };
 
 void housekeeping_task_user(void) {
-	extern uint8_t split_haptic_play;
-	if (haptic_master == true){
-		drv2605l_pulse(DRV2605L_EFFECT_SHARP_CLICK_30);
-		split_haptic_play = DRV2605L_EFFECT_SHARP_CLICK_30;
-		haptic_master = false;
-	};
-	if (haptic_slave == true){
-		drv2605l_pulse(DRV2605L_EFFECT_SHARP_CLICK_30);
-		split_haptic_play = DRV2605L_EFFECT_SHARP_CLICK_30;
-		haptic_slave = false;
-	}
+    #ifdef HAPTIC_ENABLE
+        extern uint8_t split_haptic_play;
+        if (haptic_master == true){
+            drv2605l_pulse(DRV2605L_EFFECT_SHARP_CLICK_30);
+            split_haptic_play = DRV2605L_EFFECT_SHARP_CLICK_30;
+            haptic_master = false;
+        };
+        if (haptic_slave == true){
+            drv2605l_pulse(DRV2605L_EFFECT_SHARP_CLICK_30);
+            split_haptic_play = DRV2605L_EFFECT_SHARP_CLICK_30;
+            haptic_slave = false;
+        }
+    #endif
 };
 
 #ifdef OS_DETECTION_ENABLE
@@ -456,6 +468,10 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
 
 void keyboard_post_init_user(void) {
 	pointing_device_set_new_cpi(cpi[cpi_sel]);
+#ifdef HAPTIC_ENABLE
+    register_code16(HF_OFF);
+    unregister_code16(HF_OFF);
+#endif
 }
 
 report_mouse_t pointing_device_task_combined_user(report_mouse_t left_report, report_mouse_t right_report) {

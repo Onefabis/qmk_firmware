@@ -57,12 +57,12 @@
 /* HAPTIC DRV */
 #define SPLIT_HAPTIC_ENABLE
 #define HAPTIC_OFF_IN_LOW_POWER 1
-#define DRV2605L_GREETING 0
-#define DRV2605L_DEFAULT_MODE 0
+#define DRV2605L_GREETING DRV2605L_EFFECT_CLEAR_SEQUENCE
+#define DRV2605L_DEFAULT_MODE DRV2605L_EFFECT_CLEAR_SEQUENCE
 #define DRV2605L_FB_ERM_LRA         0
 /* Please refer to your datasheet for the optimal setting for your specific motor. */
-#define DRV2605L_FB_BRAKEFACTOR     1 /* For 1x:0, 2x:1, 3x:2, 4x:3, 6x:4, 8x:5, 16x:6, Disable Braking:7 */
-#define DRV2605L_FB_LOOPGAIN        1 /* For  Low:0, Medium:1, High:2, Very High:3 */
+#define DRV2605L_FB_BRAKEFACTOR     6 /* For 1x:0, 2x:1, 3x:2, 4x:3, 6x:4, 8x:5, 16x:6, Disable Braking:7 */
+#define DRV2605L_FB_LOOPGAIN        0 /* For  Low:0, Medium:1, High:2, Very High:3 */
 #define DRV2605L_RATED_VOLTAGE      3
 #define DRV2605L_V_PEAK             3.3
 
@@ -70,7 +70,7 @@
 #define NO_HAPTIC_PUNCTUATION
 #define NO_HAPTIC_LOCKKEYS
 #define NO_HAPTIC_NUMERIC
-#define HAPTIC_FEEDBACK_DEFAULT 0
+#define HAPTIC_FEEDBACK_DEFAULT
 
 #define SPI_DRIVER SPID1
 #define SPI_SCK_PIN GP10
